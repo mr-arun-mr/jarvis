@@ -47,8 +47,11 @@ def _lang(name: str) -> str:
     return LANGS.get(name.strip().lower(), name.strip().lower()[:2])
 
 
-def movies_releasing(language: str = "malayalam", days_ahead: int = 30, days_back: int = 0, region: str = "IN") -> str:
-    """Films in a language releasing between (today - days_back) and (today + days_ahead). Theatrical, by date."""
+def movies_releasing(language: str = "malayalam", days_ahead: int | None = None, days_back: int = 0, region: str = "IN") -> str:
+    """Films in a language releasing between (today - days_back) and (today + days_ahead). Theatrical, by date.
+    Only days_back set -> past releases only; nothing set -> the next 30 days."""
+    if days_ahead is None:
+        days_ahead = 0 if int(days_back) > 0 else 30
     days_ahead, days_back = max(0, min(int(days_ahead), 180)), max(0, min(int(days_back), 90))
     today = date.today()
     try:
@@ -134,7 +137,7 @@ def _t(name, desc, props, required=None):
 
 TOOLS = [
     _t("movies_releasing", "Real film release schedule in a language (Malayalam, Tamil, Telugu, Hindi...). Use days_back for "
-       "'now in cinemas' / 'recent releases' and days_ahead for upcoming ones.",
+       "'came out recently' / 'now in cinemas' (leave days_ahead unset) and days_ahead for upcoming ones.",
        {"language": {"type": "string"}, "days_ahead": {"type": "integer"}, "days_back": {"type": "integer"},
         "region": {"type": "string", "description": "Country code, default IN"}}),
     _t("popular_movies", "Popular films in a language.", {"language": {"type": "string"}}),

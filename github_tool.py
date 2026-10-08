@@ -26,31 +26,64 @@ def _get(path: str, params: dict | None = None, service: str = SERVICE):
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     })
-    try:
-        with urllib.request.urlopen(req, timeout=15) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        if e.code in (401, 403):
-            raise RuntimeError("GitHub rejected the token. Check it is valid and has read access.")
-        raise RuntimeError(f"GitHub API error {e.code}")
+    for attempt in range(2):  # one retry: GitHub occasionally drops the TLS connection
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise RuntimeError("GitHub rejected the token. Check it is valid and has read access.")
+            raise RuntimeError(f"GitHub API error {e.code}")
+        except OSError:
+            if attempt:
+                raise RuntimeError("GitHub is unreachable right now.")
 
 
-def github_notifications(limit: int = 8) -> str:
-    """Unread GitHub notifications."""
+def _unread() -> list[dict]:
+    """Up to 100 unread notifications (GitHub's page maximum)."""
+    return _get("/notifications", {"per_page": 100}, NOTIF_SERVICE)
+
+
+def _split(items: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(people-driven notifications, automated CI alerts). CI alerts are build-failure noise."""
+    ci = [n for n in items if n["reason"] == "ci_activity"]
+    return [n for n in items if n["reason"] != "ci_activity"], ci
+
+
+def _describe(items: list[dict], limit: int) -> list[str]:
+    groups: dict[str, int] = {}
+    for n in items:
+        key = f"{n['repository']['full_name']} | {n['subject']['type']} | {n['subject']['title']} | reason: {n['reason']}"
+        groups[key] = groups.get(key, 0) + 1
+    rows = [f"- {c} x {k}" if c > 1 else f"- {k}" for k, c in sorted(groups.items(), key=lambda kv: -kv[1])[:limit]]
+    if len(groups) > limit:
+        rows.append(f"(and {len(groups) - limit} more)")
+    return rows
+
+
+def github_notifications(limit: int = 8, include_ci: bool = False) -> str:
+    """Unread notifications from people: mentions, review requests, assignments, comments. CI failures are summarised."""
     limit = max(1, min(int(limit), 20))
     try:
-        items = _get("/notifications", {"per_page": limit}, NOTIF_SERVICE)
+        items = _unread()
     except RuntimeError as e:
         if "rejected" in str(e):
             return ("ERROR: The notifications token was rejected. It must be a classic token with the 'notifications' scope, "
                     "stored as jarvis-github-notifications.")
         return f"ERROR: {e}"
-    if not items:
-        return "No unread GitHub notifications."
-    lines = [f"{len(items)} unread notification(s):"]
-    for n in items:
-        s = n["subject"]
-        lines.append(f"- {n['repository']['full_name']} | {s['type']} | {s['title']} | reason: {n['reason']}")
+    people, ci = _split(items)
+    cap = "+" if len(items) >= 100 else ""
+    lines = []
+    if people:
+        lines.append(f"The user has {len(people)}{cap} unread GitHub notification(s) from people or assignments:")
+        lines += _describe(people, limit)
+    else:
+        lines.append("No unread GitHub notifications from people (no mentions, reviews, assignments or comments).")
+    if ci:
+        repos = sorted({n["repository"]["full_name"] for n in ci})
+        lines.append(f"Separately, {len(ci)}{cap} automated CI build-failure alerts are unread, from: {', '.join(repos)}.")
+        if include_ci:
+            lines += _describe(ci, limit)
     return "\n".join(lines)
 
 
@@ -70,6 +103,11 @@ def github_my_work(limit: int = 5) -> str:
             for it in res["items"]:
                 repo = it["repository_url"].split("/repos/")[-1]
                 out.append(f"  - {repo}#{it['number']} {it['title']}")
+        try:  # needs the separate notifications token; skip quietly if it is not set up
+            people, ci = _split(_unread())
+            out.append(f"Unread notifications from people: {len(people)}; automated CI failure alerts: {len(ci)}")
+        except RuntimeError:
+            pass
         return "\n".join(out)
     except RuntimeError as e:
         return f"ERROR: {e}"
@@ -80,9 +118,10 @@ KEYWORDS = ['github', 'pull request', ' pr', 'review', 'issue', 'repo', 'notific
 TOOLS = [
     {"type": "function", "function": {
         "name": "github_notifications",
-        "description": "Read the user's real unread GitHub notifications (read-only).",
+        "description": "Read the user's real unread GitHub notifications (read-only): mentions, reviews, assignments. CI build failures are summarised separately.",
         "parameters": {"type": "object", "properties": {
-            "limit": {"type": "integer", "description": "Max items, up to 20 (default 8)"}}}}},
+            "limit": {"type": "integer", "description": "Max items, up to 20 (default 8)"},
+            "include_ci": {"type": "boolean", "description": "Also list the CI build-failure alerts (only if the user asks about CI or builds)"}}}}},
     {"type": "function", "function": {
         "name": "github_my_work",
         "description": "Summarise the user's GitHub work: PRs awaiting their review, issues assigned to them, and their open PRs (read-only).",

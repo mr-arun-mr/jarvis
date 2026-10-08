@@ -30,7 +30,7 @@ Everything marked optional is off until configured; Jarvis answers with a clear 
 | Tool | What it does | Access |
 |---|---|---|
 | `check_inbox` | Unread Gmail: sender, subject, date | read-only |
-| `list_whatsapp_chats`, `read_whatsapp_chat` | WhatsApp Desktop chats and recent messages | read-only |
+| `list_whatsapp_chats`, `read_whatsapp_chat` | WhatsApp Desktop: chats with new messages in the last N hours (cannot tell what you read on your phone); latest messages of one chat | read-only |
 | `github_my_work`, `github_notifications` | PRs awaiting review, assigned issues, your PRs, notifications | read-only |
 | `get_calendar_events` | Events from today through N days | read-only |
 | `list_reminders`, `add_reminder` | Open reminders; create one | read + create |

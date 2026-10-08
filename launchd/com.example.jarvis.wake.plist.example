@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.jarvis.wake</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__HOME__/jarvis/.venv/bin/python</string>
+    <string>__HOME__/jarvis/wake.py</string>
+  </array>
+  <key>WorkingDirectory</key><string>__HOME__/jarvis</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/jarvis/wake.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/jarvis/wake.log</string>
+</dict>
+</plist>

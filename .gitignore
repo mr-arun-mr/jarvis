@@ -218,3 +218,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Jarvis: personal data and secrets (never commit) ---
+config.json
+memory.json
+*.rtf
+*.plist
+*notes*
+*.sqlite
+*.sqlite-*
+.DS_Store
+*.pem
+*.key
+*.p12
+secrets*
+credentials*

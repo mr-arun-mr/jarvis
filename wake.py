@@ -13,11 +13,14 @@ from faster_whisper import WhisperModel
 from openwakeword.model import Model
 
 import brain
+import config
+import notify
 
 RATE = 16000
 CHUNK = 1280              # 80 ms, what openWakeWord expects
 THRESHOLD = 0.5
 VOICE = "Daniel"
+TAMIL_VOICE = "Vani"   # macOS has no Malayalam voice; Malayalam replies are shown as a notification instead
 MAX_UTTERANCE_S = 15
 SILENCE_S = 0.9
 HISTORY_TURNS = 8
@@ -25,8 +28,11 @@ HISTORY_TURNS = 8
 vad = webrtcvad.Vad(2)
 
 
-def say(text: str) -> None:
-    subprocess.run(["say", "-v", VOICE, text])
+def say(text: str, lang: str = "en") -> None:
+    if lang == "ml":
+        notify.notify("Jarvis", text)
+        return
+    subprocess.run(["say", "-v", TAMIL_VOICE if lang == "ta" else VOICE, text])
 
 
 def ping() -> None:
@@ -58,7 +64,10 @@ def record_utterance(mic: sd.InputStream) -> np.ndarray:
 def main() -> None:
     test = "--test" in sys.argv
     oww = Model(wakeword_models=["hey_jarvis"], inference_framework="onnx")
-    stt = None if test else WhisperModel("small.en", compute_type="int8")
+    cfg = config.load()
+    # English only by default. For Malayalam/Tamil set "wake_stt_model": "large-v3-turbo" and "wake_language": "ml" (or "auto").
+    stt = None if test else WhisperModel(cfg.get("wake_stt_model", "small.en"), compute_type="int8")
+    forced = cfg.get("wake_language", "en")
     history: list[dict] = []
     print("Listening for 'Hey Jarvis'..." if not test else "Test mode: printing wake scores. Say 'Hey Jarvis'.", flush=True)
     with sd.InputStream(samplerate=RATE, channels=1, dtype="int16", blocksize=CHUNK) as mic:
@@ -76,16 +85,17 @@ def main() -> None:
             audio = record_utterance(mic)
             if audio.size == 0:
                 continue
-            segs, _ = stt.transcribe(audio, language="en")
+            segs, info = stt.transcribe(audio, language=None if forced == "auto" else forced)
             text = " ".join(s.text for s in segs).strip()
+            lang = info.language if forced == "auto" else forced
             if not text:
                 continue
             print(f"you> {text}", flush=True)
             history.append({"role": "user", "content": text})
-            answer = brain.reply(history[-HISTORY_TURNS:])
+            answer = brain.reply(history[-HISTORY_TURNS:], lang)
             history.append({"role": "assistant", "content": answer})
             print(f"jarvis> {answer}", flush=True)
-            say(answer)
+            say(answer, lang)
             mic.read(mic.read_available)  # drop audio captured while speaking
             oww.reset()
 

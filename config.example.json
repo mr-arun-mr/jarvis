@@ -1,4 +1,13 @@
 {
   "default_city": "",
-  "model": "qwen2.5:14b"
+  "model": "qwen2.5:14b",
+  "vision_model": "qwen2.5vl:7b",
+  "briefings": {"morning": "07:30", "night": "21:30"},
+  "alerts": {"quiet_start": "23:00", "quiet_end": "07:00", "calendar": true, "github": true, "email": true, "vehicles": true},
+  "vehicles": [{"name": "Car", "tax": "2027-03-01", "mot": "2027-05-10", "insurance": "2027-02-14", "service": "2027-04-01"}],
+  "doc_folders": ["~/Documents"],
+  "doc_exclude": ["github"],
+  "doc_extensions": [".pdf", ".docx", ".txt", ".md", ".rtf", ".csv"],
+  "allowed_hosts": [],
+  "phone": {}
 }

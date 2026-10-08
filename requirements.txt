@@ -1,8 +1,9 @@
-ollama
-faster-whisper
-sounddevice
-numpy
-webrtcvad-wheels
 ddgs
-openwakeword
+faster-whisper
+numpy
+ollama
 onnxruntime
+openwakeword
+pypdf
+sounddevice
+webrtcvad-wheels

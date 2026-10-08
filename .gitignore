@@ -233,3 +233,7 @@ memory.json
 *.p12
 secrets*
 credentials*
+docs_index.*
+timers.json
+alerts_state.json
+.access_key

@@ -22,6 +22,8 @@
            font:inherit; letter-spacing:.2em; cursor:pointer; text-transform:uppercase; transition:.2s; }
   button:hover, button.on { background:rgba(46,230,255,.15); box-shadow:0 0 18px rgba(46,230,255,.4); }
   button.on { border-color:var(--c); }
+  select { background:#02080d; color:var(--c); border:1px solid var(--c2); padding:10px 12px; font:inherit; }
+  .msg.alert { border-color:#7dff9b; color:#7dff9b; }
   .panel { border-left:1px solid var(--c2); display:flex; flex-direction:column; background:rgba(2,12,18,.7); min-height:0; }
   .panel h2 { font-size:12px; letter-spacing:.35em; padding:22px 22px 12px; opacity:.7; font-weight:400; }
   #log { flex:1; overflow-y:auto; padding:0 22px; display:flex; flex-direction:column; gap:14px; }
@@ -44,6 +46,11 @@
   <div class="controls">
     <button id="mic">Listen</button>
     <button id="mute">Voice: on</button>
+    <select id="lang" title="Language">
+      <option value="en-GB">English</option>
+      <option value="ml-IN">മലയാളം</option>
+      <option value="ta-IN">தமிழ்</option>
+    </select>
   </div>
 </div>
 <div class="panel">
@@ -125,7 +132,8 @@ async function ask(text) {
   const out = addMsg("jarvis", "");
   let full = "";
   try {
-    const res = await fetch("/chat", { method:"POST", body: JSON.stringify({ messages: history }) });
+    const res = await fetch("/chat", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ messages: history, lang: $("lang").value }) });
     const reader = res.body.getReader(), dec = new TextDecoder();
     let buf = "";
     for (;;) {
@@ -151,13 +159,41 @@ function speak(text) {
   if (!voiceOn || !window.speechSynthesis) { setState("idle"); resumeListening(); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices();
-  u.voice = voices.find(v => /Daniel|Google UK English Male/.test(v.name)) || voices.find(v => v.lang === "en-GB") || null;
+  const voices = speechSynthesis.getVoices(), lang = $("lang").value;
+  if (lang !== "en-GB") {
+    u.lang = lang;
+    u.voice = voices.find(v => v.lang.replace("_", "-") === lang) || null;
+    if (!u.voice) { note.textContent = "No " + lang + " voice installed on this device, so replies are shown, not spoken."; setState("idle"); resumeListening(); return; }
+    note.textContent = "";
+  } else {
+    u.voice = voices.find(v => /Daniel|Google UK English Male/.test(v.name)) || voices.find(v => v.lang === "en-GB") || null;
+  }
   u.rate = 1.02; u.pitch = .9;
   u.onstart = () => setState("speaking");
   u.onend = u.onerror = () => { setState("idle"); resumeListening(); };
   speechSynthesis.speak(u);
 }
+
+$("lang").onchange = () => { if (wantListen) { wantListenPause(); } try { localStorage.setItem("jarvisLang", $("lang").value); } catch {} };
+try { const l = localStorage.getItem("jarvisLang"); if (l) $("lang").value = l; } catch {}
+
+// Alerts, timers and briefings pushed by the server's scheduler
+let lastEvent = 0;
+async function pollEvents() {
+  try {
+    const res = await fetch("/events?since=" + lastEvent);
+    if (res.ok) for (const e of await res.json()) {
+      lastEvent = Math.max(lastEvent, e.id);
+      const d = document.createElement("div");
+      d.className = "msg alert";
+      d.innerHTML = `<small>ALERT ${e.time} · </small><span></span>`;
+      d.firstChild.append(e.title.toUpperCase());
+      d.lastChild.textContent = e.body;
+      log.appendChild(d); log.scrollTop = log.scrollHeight;
+    }
+  } catch {}
+}
+setInterval(pollEvents, 5000); pollEvents();
 
 $("form").onsubmit = e => { e.preventDefault(); const v = $("input").value; $("input").value = ""; ask(v); };
 $("mute").onclick = () => {
@@ -192,7 +228,7 @@ function stopMeter() {
 
 function startRec() {
   if (!SR) { note.textContent = "Voice input needs Chrome or Safari. Typing still works."; return; }
-  rec = new SR(); rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false;
+  rec = new SR(); rec.lang = $("lang").value; rec.interimResults = true; rec.continuous = false;
   rec.onstart = () => { listening = true; setState("listening"); };
   rec.onresult = e => {
     const r = e.results[e.results.length - 1];

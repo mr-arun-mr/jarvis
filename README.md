@@ -86,7 +86,7 @@ After the wake word you hear a tick, speak your request, and pause; Jarvis answe
 To run it at login, once the manual test works (see next section):
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.jarvis.wake.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.arun.jarvis.wake.plist
 ```
 
 Background services may not get microphone permission automatically. If `~/Library/Logs/jarvis/wake.log` shows silence or errors, run it from Terminal instead, which is already allowed.
@@ -119,25 +119,25 @@ Facebook and Instagram are not supported: Meta has no API for personal accounts,
 
 ## Run at startup
 
-Templates are in `launchd/`. Install one with your own home path (the label `com.example.*` is a placeholder; use your own and substitute it in the commands below):
+Templates are in `launchd/`. Install them with your home path filled in. The `com.arun.*` label is just a name; if you pick a different one, substitute it in every command below:
 
 ```bash
 mkdir -p ~/Library/Logs/jarvis
-sed "s#__HOME__#$HOME#g" launchd/com.example.jarvis.plist.example > ~/Library/LaunchAgents/com.example.jarvis.plist
-sed "s#__HOME__#$HOME#g" launchd/com.example.jarvis.wake.plist.example > ~/Library/LaunchAgents/com.example.jarvis.wake.plist
+sed "s#__HOME__#$HOME#g" launchd/com.arun.jarvis.plist.example > ~/Library/LaunchAgents/com.arun.jarvis.plist
+sed "s#__HOME__#$HOME#g" launchd/com.arun.jarvis.wake.plist.example > ~/Library/LaunchAgents/com.arun.jarvis.wake.plist
 ```
 
 Two LaunchAgents in `~/Library/LaunchAgents/`:
-- `com.example.jarvis.plist`: runs `server.py` at login and restarts it if it crashes (enabled).
-- `com.example.jarvis.wake.plist`: runs `wake.py` the same way (created, **not enabled** until you've tested the mic).
+- `com.arun.jarvis.plist`: runs `server.py` at login and restarts it if it crashes (enabled).
+- `com.arun.jarvis.wake.plist`: runs `wake.py` the same way (created, **not enabled** until you've tested the mic).
 
 Ollama starts separately through `brew services`.
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.jarvis.plist      # enable
-launchctl bootout gui/$(id -u)/com.example.jarvis                                      # disable
-launchctl kickstart -k gui/$(id -u)/com.example.jarvis                                 # restart after code changes
-launchctl print gui/$(id -u)/com.example.jarvis | grep -E "state|pid"                  # status
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.arun.jarvis.plist      # enable
+launchctl bootout gui/$(id -u)/com.arun.jarvis                                      # disable
+launchctl kickstart -k gui/$(id -u)/com.arun.jarvis                                 # restart after code changes
+launchctl print gui/$(id -u)/com.arun.jarvis | grep -E "state|pid"                  # status
 tail -f ~/Library/Logs/jarvis/server.log                                            # logs (tool calls show as "tool: name")
 ```
 
@@ -171,7 +171,7 @@ Make a module with `TOOLS` (JSON schemas), `FUNCTIONS` (name to function) and `K
 
 | Problem | Fix |
 |---|---|
-| Page won't load | `launchctl print gui/$(id -u)/com.example.jarvis`, then the log. |
+| Page won't load | `launchctl print gui/$(id -u)/com.arun.jarvis`, then the log. |
 | "Connection fault" | Ollama isn't running: `brew services start ollama`. |
 | Mic does nothing in the browser | Use Chrome or Safari; allow the mic in the address bar. |
 | Wake word never fires | Run `wake.py --test`; lower `THRESHOLD`; check the mic is allowed for your terminal. |

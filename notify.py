@@ -13,6 +13,7 @@ from collections import deque
 from datetime import datetime
 
 import config
+import speech
 
 _events: deque = deque(maxlen=50)
 _ids = itertools.count(1)
@@ -56,7 +57,7 @@ def notify(title: str, body: str, speak: bool = False, urgent: bool = False, pho
         except Exception:
             pass  # a failing channel must not stop the others
     if speak and not quiet:
-        subprocess.Popen(["say", "-v", VOICE, body])
+        speech.say_async(body, VOICE)
 
 
 def events_since(last_id: int) -> list[dict]:

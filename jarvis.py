@@ -1,5 +1,4 @@
 """Local Jarvis: mic -> faster-whisper -> Ollama -> macOS `say`."""
-import subprocess
 import sys
 
 import numpy as np
@@ -7,6 +6,8 @@ import ollama
 import sounddevice as sd
 import webrtcvad
 from faster_whisper import WhisperModel
+
+import speech
 
 MODEL = "qwen2.5:14b"
 RATE = 16000
@@ -43,7 +44,7 @@ def listen() -> np.ndarray:
 
 
 def speak(text: str) -> None:
-    subprocess.run(["say", "-v", VOICE, text])
+    speech.say(text, VOICE)
 
 
 def main() -> None:

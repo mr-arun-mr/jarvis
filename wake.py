@@ -15,6 +15,7 @@ from openwakeword.model import Model
 import brain
 import config
 import notify
+import speech
 
 RATE = 16000
 CHUNK = 1280              # 80 ms, what openWakeWord expects
@@ -32,7 +33,7 @@ def say(text: str, lang: str = "en") -> None:
     if lang == "ml":
         notify.notify("Jarvis", text)
         return
-    subprocess.run(["say", "-v", TAMIL_VOICE if lang == "ta" else VOICE, text])
+    speech.say(text, TAMIL_VOICE if lang == "ta" else VOICE)
 
 
 def ping() -> None:
